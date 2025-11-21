@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunny-Boy | 渗透测试 & 全栈开发 | 系统接入中...</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.7.1/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050510;
+            --primary: #00f3ff; /* Neon Cyan */
+            --secondary: #bc13fe; /* Cyber Purple */
+            --accent: #ffe600; /* Industrial Yellow */
+            --text: #e0e6ed;
+            --text-dim: #8892b0;
+            --glass: rgba(10, 20, 40, 0.6);
+            --glass-border: rgba(0, 243, 255, 0.2);
+            --card-bg: rgba(10, 15, 30, 0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Noto Sans SC', sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--secondary); border-radius: 3px; }
+
+        /* Canvas Background */
+        #canvas-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            opacity: 0.8;
+            pointer-events: none;
+        }
+
+        /* Layout & Typography */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            position: relative;
+            z-index: 1;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* HUD Navigation */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(5, 5, 16, 0.8);
+        }
+        .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-shadow: 0 0 10px var(--primary);
+            letter-spacing: 2px;
+        }
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            border: 1px solid var(--glass-border);
+            padding: 5px 15px;
+            border-radius: 20px;
+            background: rgba(0,0,0,0.3);
+        }
+        .status-dot {
+            width: 8px; height: 8px; background: var(--primary);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--primary);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
+        /* Hero Section */
+        section {
+            min-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 100px 0;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1fr 0.8fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .hero-content h1 {
+            font-size: 4rem;
+            line-height: 1.1;
+            margin-bottom: 25px;
+            font-weight: 700;
+            background: linear-gradient(to right, #fff, var(--text-dim));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .glitch-text {
+            position: relative;
+            color: var(--primary);
+            display: inline-block;
+        }
+        
+        .tagline {
+            font-size: 1.2rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+            margin-bottom: 40px;
+            border-left: 3px solid var(--secondary);
+            padding-left: 20px;
+        }
+
+        .tech-btn {
+            display: inline-block;
+            padding: 12px 35px;
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            text-decoration: none;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+        }
+        .tech-btn:hover {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.4);
+        }
+
+        /* Terminal Window */
+        .terminal-wrapper {
+            position: relative;
+            padding: 2px;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+        .terminal-window {
+            background: #0a0b10;
+            border-radius: 6px;
+            height: 450px;
+            display: flex;
+            flex-direction: column;
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden;
+        }
+        .terminal-header {
+            background: #1a1b25;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+        .terminal-controls { display: flex; gap: 8px; }
+        .ctrl { width: 12px; height: 12px; border-radius: 50%; }
+        .terminal-body {
+            padding: 20px;
+            color: var(--text);
+            font-size: 0.9rem;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        .cmd-line { color: var(--secondary); margin-bottom: 5px; }
+        .cmd-output { color: var(--text-dim); margin-bottom: 15px; white-space: pre-wrap; line-height: 1.5; }
+
+        /* Cards & Stats */
+        .section-title {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .section-title::before {
+            content: '';
+            display: block;
+            width: 8px;
+            height: 40px;
+            background: var(--secondary);
+            box-shadow: 0 0 15px var(--secondary);
+        }
+        
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 50px;
+        }
+        
+        .tech-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 30px;
+            border-radius: 10px;
+            position: relative;
+            transition: all 0.3s;
+            backdrop-filter: blur(5px);
+        }
+        .tech-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 243, 255, 0.1);
+        }
+        .tech-card h3 {
+            color: var(--text);
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .tech-card i { color: var(--primary); }
+        
+        /* Skills Progress */
+        .skill-item {
+            margin-bottom: 18px;
+        }
+        .skill-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            color: var(--text-dim);
+        }
+        .skill-bar {
+            height: 6px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .skill-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            border-radius: 3px;
+            position: relative;
+        }
+        .skill-fill::after {
+            content: '';
+            position: absolute;
+            top: 0; right: 0; bottom: 0; left: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+        /* Projects */
+        .repo-card {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            padding: 25px;
+            position: relative;
+            overflow: hidden;
+            transition: 0.3s;
+        }
+        .repo-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 2px;
+            background: var(--primary);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: 0.3s;
+        }
+        .repo-card:hover::before { transform: scaleX(1); }
+        
+        .repo-stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding: 60px 0;
+            margin-top: 100px;
+            text-align: center;
+            background: radial-gradient(circle at top, rgba(188, 19, 254, 0.1), transparent 70%);
+        }
+        .footer-links a {
+            color: var(--text);
+            font-size: 1.5rem;
+            margin: 0 20px;
+            transition: 0.3s;
+        }
+        .footer-links a:hover { color: var(--primary); text-shadow: 0 0 15px var(--primary); }
+
+        @media (max-width: 900px) {
+            .hero-grid { grid-template-columns: 1fr; }
+            .terminal-wrapper { display: none; }
+            .hero-content h1 { font-size: 3rem; }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="container">
+        <nav>
+            <div class="logo">SUNNY_BOY <span style="font-size:0.8rem; color:var(--text-dim); font-weight:400;">// SYSTEM_V2.0</span></div>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span class="mono">NEURAL_LINK: CONNECTED</span>
+            </div>
+        </nav>
+
+        <section id="home">
+            <div class="hero-grid">
+                <div class="hero-content">
+                    <div style="display:flex; gap:10px; margin-bottom:20px;">
+                        <span class="mono" style="color:var(--secondary)">[ 渗透测试 ]</span>
+                        <span class="mono" style="color:var(--primary)">[ 全栈开发 ]</span>
+                    </div>
+                    <h1>
+                        打破边界<br>
+                        <span class="glitch-text">重构未来</span>
+                    </h1>
+                    <p class="tagline">
+                        我是 Sunny-Boy，一名游走在代码与安全边界的探索者。<br>
+                        
+                    </p>
+                    <div style="display:flex; gap:20px;">
+                        <a href="#projects" class="tech-btn">查看军火库</a>
+                        <a href="#contact" class="tech-btn" style="background:transparent; color:var(--text);">建立连接</a>
+                    </div>
+                </div>
+
+                <div class="terminal-wrapper">
+                    <div class="terminal-window">
+                        <div class="terminal-header">
+                            <span class="mono" style="color:#aaa; font-size:0.8rem;">root@sunny-server:~</span>
+                            <div class="terminal-controls">
+                                <div class="ctrl" style="background:#ff5f56"></div>
+                                <div class="ctrl" style="background:#ffbd2e"></div>
+                                <div class="ctrl" style="background:#27c93f"></div>
+                            </div>
+                        </div>
+                        <div class="terminal-body" id="terminal-text"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="skills">
+            <div class="section-header">
+                <h2 class="section-title">技能矩阵 <span class="mono" style="font-size:1rem; color:var(--text-dim); margin-top:10px;">/// SKILL_MATRIX</span></h2>
+            </div>
+
+            <div class="grid-cards">
+                <!-- Offensive Security -->
+                <div class="tech-card">
+                    <h3><i class="fas fa-skull-crossbones"></i> 攻防安全</h3>
+                    <div class="skill-item">
+                        <div class="skill-meta"><span>Web 渗透 (Burp/Metasploit)</span><span>90%</span></div>
+                        <div class="skill-bar"><div class="skill-fill" style="width:90%"></div></div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-meta"><span>内网渗透 & 提权</span><span>80%</span></div>
+                        <div class="skill-bar"><div class="skill-fill" style="width:80%"></div></div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-meta"><span>代码审计 (Python/PHP/Java)</span><span>85%</span></div>
+                        <div class="skill-bar"><div class="skill-fill" style="width:85%"></div></div>
+                    </div>
+                </div>
+
+                <!-- Backend Dev -->
+                <div class="tech-card">
+                    <h3><i class="fas fa-code"></i> 后端架构</h3>
+                    <div class="skill-item">
+                        <div class="skill-meta"><span>Python (Flask/Django/FastAPI)</span><span>95%</span></div>
+                        <div class="skill-bar"><div class="skill-fill" style="width:95%"></div></div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-meta"><span>Java (Spring Boot/Cloud)</span><span>88%</span></div>
+                        <div class="skill-bar"><div class="skill-fill" style="width:88%"></div></div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-meta"><span>Database (MySQL/Redis)</span><span>90%</span></div>
+                        <div class="skill-bar"><div class="skill-fill" style="width:90%"></div></div>
+                    </div>
+                </div>
+
+                <!-- Frontend & Others -->
+                <div class="tech-card">
+                    <h3><i class="fas fa-terminal"></i> 全栈 & 工具</h3>
+                    <div class="skill-item">
+                        <div class="skill-meta"><span>Vue.js / Modern UI</span><span>85%</span></div>
+                        <div class="skill-bar"><div class="skill-fill" style="width:85%"></div></div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-meta"><span>Docker / K8s / CI/CD</span><span>80%</span></div>
+                        <div class="skill-bar"><div class="skill-fill" style="width:80%"></div></div>
+                    </div>
+                    <div class="skill-item">
+                        <div class="skill-meta"><span>爬虫 & 逆向工程</span><span>92%</span></div>
+                        <div class="skill-bar"><div class="skill-fill" style="width:92%"></div></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="projects" style="margin-top: 100px;">
+            <div class="section-header">
+                <h2 class="section-title">开源项目 <span class="mono" style="font-size:1rem; color:var(--text-dim); margin-top:10px;">/// REPOSITORIES</span></h2>
+            </div>
+            <div id="repos-container" class="grid-cards">
+                <!-- Content populated by JS -->
+            </div>
+        </section>
+
+        <footer id="contact">
+            <h2 style="margin-bottom:20px;">与我联系</h2>
+            <p class="mono" style="color:var(--text-dim); margin-bottom:40px;">INITIALIZE_HANDSHAKE_PROTOCOL</p>
+            <div class="footer-links">
+                <a href="https://github.com/Sunny-Boy"><i class="fab fa-github"></i></a>
+                <a href="mailto:your@email.com"><i class="fas fa-envelope"></i></a>
+                <a href="#"><i class="fab fa-telegram"></i></a>
+            </div>
+            <p style="margin-top:50px; font-size:0.8rem; color:var(--text-dim);">
+                © 2025 Sunny-Boy. All Systems Operational.<br>
+                Powered by <span style="color:var(--primary)">Caffeine</span> & <span style="color:var(--secondary)">Code</span>.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const GITHUB_USERNAME = 'Sunny-Boy';
+
+        // Terminal Logic
+        const terminalContent = [
+            { cmd: 'whoami', out: 'sunny_boy' },
+            { cmd: 'neofetch', out: 'OS: CyberSec OS v2.0\nKernel: 5.15.0-kali-amd64\nUptime: 99.99%\nShell: zsh 5.9' },
+            { cmd: 'python3 skills_analyze.py', out: '[+] 检测到攻击性安全模块... 已加载\n[+] 检测到全栈开发框架... 已加载\n[+] 正在构建神经网络...' },
+            { cmd: './deploy_portfolio.sh', out: '正在部署个人主页...\n连接至 Github API... 成功\n渲染 3D 核心... 成功\n系统就绪。' }
+        ];
+
+        async function typeTerminal() {
+            const term = document.getElementById('terminal-text');
+            for (const line of terminalContent) {
+                const cmdLine = document.createElement('div');
+                cmdLine.className = 'cmd-line';
+                cmdLine.innerHTML = `<span style="color: #00f3ff;">➜</span> <span style="color: #ffe600;">~</span> `;
+                term.appendChild(cmdLine);
+
+                for (let char of line.cmd) {
+                    cmdLine.innerHTML += char;
+                    await new Promise(r => setTimeout(r, 30));
+                }
+                
+                await new Promise(r => setTimeout(r, 300));
+
+                if (line.out) {
+                    const outLine = document.createElement('div');
+                    outLine.className = 'cmd-output';
+                    outLine.innerText = line.out;
+                    term.appendChild(outLine);
+                }
+                
+                term.scrollTop = term.scrollHeight;
+                await new Promise(r => setTimeout(r, 500));
+            }
+            
+            const cursor = document.createElement('div');
+            cursor.innerHTML = `<span style="color: #00f3ff;">➜</span> <span style="color: #ffe600;">~</span> <span style="animation:blink 1s infinite">_</span>`;
+            term.appendChild(cursor);
+        }
+
+        // GitHub Repos
+        async function fetchRepos() {
+            const container = document.getElementById('repos-container');
+            try {
+                const res = await fetch(`https://api.github.com/users/${GITHUB_USERNAME}/repos?sort=updated&per_page=6`);
+                const data = await res.json();
+                container.innerHTML = '';
+                
+                data.forEach(repo => {
+                    const div = document.createElement('div');
+                    div.className = 'repo-card tech-card';
+                    div.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <h4 class="mono" style="color:var(--primary); font-size:1.1rem;">${repo.name}</h4>
+                            <i class="fas fa-code-branch" style="color:var(--text-dim)"></i>
+                        </div>
+                        <p style="color:var(--text-dim); font-size:0.9rem; height:60px; overflow:hidden;">${repo.description || '暂无描述 | No description'}</p>
+                        <div class="repo-stats mono">
+                            <span><i class="fas fa-circle" style="color:${repo.language === 'Python' ? '#3572A5' : repo.language === 'Java' ? '#b07219' : '#f1e05a'}"></i> ${repo.language || 'N/A'}</span>
+                            <span><i class="fas fa-star"></i> ${repo.stargazers_count}</span>
+                        </div>
+                        <a href="${repo.html_url}" target="_blank" style="position:absolute; inset:0;"></a>
+                    `;
+                    container.appendChild(div);
+                });
+            } catch (err) {
+                container.innerHTML = '<p class="mono" style="color:var(--alert)">无法连接至 GitHub 数据库。</p>';
+            }
+        }
+
+        // 3D Background (Particle Network)
+        function initThree() {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            const geometry = new THREE.IcosahedronGeometry(10, 2);
+            const material = new THREE.PointsMaterial({
+                color: 0x00f3ff,
+                size: 0.15,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            // Wireframe wrapper
+            const wireframeGeo = new THREE.WireframeGeometry(geometry);
+            const wireframeMat = new THREE.LineBasicMaterial({ color: 0xbc13fe, transparent: true, opacity: 0.1 });
+            const wireframe = new THREE.LineSegments(wireframeGeo, wireframeMat);
+            
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+            scene.add(wireframe);
+
+            camera.position.z = 20;
+
+            const animate = () => {
+                requestAnimationFrame(animate);
+                points.rotation.y += 0.002;
+                points.rotation.x += 0.001;
+                wireframe.rotation.y += 0.002;
+                wireframe.rotation.x += 0.001;
+                
+                // Slight mouse parallax could be added here
+                renderer.render(scene, camera);
+            };
+            animate();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        }
+
+        window.onload = () => {
+            initThree();
+            typeTerminal();
+            fetchRepos();
+        };
+    </script>
+</body>
+</html>
