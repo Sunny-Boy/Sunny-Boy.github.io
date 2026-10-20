@@ -506,33 +506,60 @@
             term.appendChild(cursor);
         }
 
-        // GitHub Repos
-        async function fetchRepos() {
+        // GitHub Repos (API 失败时自动使用内置数据)
+        const FALLBACK_REPOS = [
+            { name: 'HanziPractice', description: '字帖生成器在线网站，部署到 GitHub Pages 中', language: 'Vue', stargazers_count: 4, html_url: 'https://github.com/Sunny-Boy/HanziPractice' },
+            { name: 'study', description: '学习仓库', language: 'Python', stargazers_count: 0, html_url: 'https://github.com/Sunny-Boy/study' },
+            { name: 'FootballOnlineEdu', description: '球学Online 一个B2C模式但免费的足球在线网站', language: 'Python', stargazers_count: 0, html_url: 'https://github.com/Sunny-Boy/FootballOnlineEdu' },
+            { name: 'BookManagement', description: '基于VS2015+SQL Server2019 大二C#大作业', language: 'C#', stargazers_count: 0, html_url: 'https://github.com/Sunny-Boy/BookManagement' },
+            { name: 'Sunny-Boy.github.io', description: '个人技术博客网站、开发项目网站介绍', language: 'HTML', stargazers_count: 0, html_url: 'https://github.com/Sunny-Boy/Sunny-Boy.github.io' }
+        ];
+
+        function renderRepos(list) {
             const container = document.getElementById('repos-container');
+            container.innerHTML = '';
+            list.forEach(repo => {
+                const div = document.createElement('div');
+                div.className = 'repo-card tech-card';
+                div.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <h4 class="mono" style="color:var(--primary); font-size:1.1rem;">${repo.name}</h4>
+                        <i class="fas fa-code-branch" style="color:var(--text-dim)"></i>
+                    </div>
+                    <p style="color:var(--text-dim); font-size:0.9rem; height:60px; overflow:hidden;">${repo.description || '暂无描述 | No description'}</p>
+                    <div class="repo-stats mono">
+                        <span><i class="fas fa-circle" style="color:${repo.language === 'Python' ? '#3572A5' : repo.language === 'Java' ? '#b07219' : '#f1e05a'}"></i> ${repo.language || 'N/A'}</span>
+                        <span><i class="fas fa-star"></i> ${repo.stargazers_count}</span>
+                    </div>
+                    <a href="${repo.html_url}" target="_blank" style="position:absolute; inset:0;"></a>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        async function fetchRepos() {
             try {
-                const res = await fetch(`https://api.github.com/users/${GITHUB_USERNAME}/repos?sort=updated&per_page=6`);
+                const cached = JSON.parse(localStorage.getItem('repos_cache') || 'null');
+                if (cached && Date.now() - cached.t < 3600 * 1000) {
+                    renderRepos(cached.d);
+                    return;
+                }
+            } catch (e) {}
+
+            try {
+                const ctl = new AbortController();
+                const timer = setTimeout(() => ctl.abort(), 6000);
+                const res = await fetch(`https://api.github.com/users/${GITHUB_USERNAME}/repos?sort=updated&per_page=100`, { signal: ctl.signal });
+                clearTimeout(timer);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
-                container.innerHTML = '';
-                
-                data.forEach(repo => {
-                    const div = document.createElement('div');
-                    div.className = 'repo-card tech-card';
-                    div.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                            <h4 class="mono" style="color:var(--primary); font-size:1.1rem;">${repo.name}</h4>
-                            <i class="fas fa-code-branch" style="color:var(--text-dim)"></i>
-                        </div>
-                        <p style="color:var(--text-dim); font-size:0.9rem; height:60px; overflow:hidden;">${repo.description || '暂无描述 | No description'}</p>
-                        <div class="repo-stats mono">
-                            <span><i class="fas fa-circle" style="color:${repo.language === 'Python' ? '#3572A5' : repo.language === 'Java' ? '#b07219' : '#f1e05a'}"></i> ${repo.language || 'N/A'}</span>
-                            <span><i class="fas fa-star"></i> ${repo.stargazers_count}</span>
-                        </div>
-                        <a href="${repo.html_url}" target="_blank" style="position:absolute; inset:0;"></a>
-                    `;
-                    container.appendChild(div);
-                });
+                if (!Array.isArray(data)) throw new Error('bad data');
+                const list = data.filter(r => !r.fork && r.name !== GITHUB_USERNAME).slice(0, 6);
+                if (!list.length) throw new Error('empty');
+                localStorage.setItem('repos_cache', JSON.stringify({ t: Date.now(), d: list }));
+                renderRepos(list);
             } catch (err) {
-                container.innerHTML = '<p class="mono" style="color:var(--alert)">无法连接至 GitHub 数据库。</p>';
+                renderRepos(FALLBACK_REPOS);
             }
         }
 
